@@ -2,6 +2,8 @@ import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
 import { EXPLORER_TX, NETWORK, NETWORK_LABEL, siteUrl } from "@/lib/config";
 import { getLicense, licensePublic } from "@/lib/licenses";
+import { licenseResourceUrl, purchase } from "@/lib/purchase";
+import { paymentRequiredBody } from "@/lib/x402";
 import { getBytes } from "@/lib/storage";
 import { TERMS_SUMMARY } from "@/lib/terms";
 import { formatPrice, getWork, searchWorks, toPublic } from "@/lib/works";
@@ -106,6 +108,7 @@ const handler = createMcpHandler(
         const w = await getWork(id);
         if (!w) return text(`No work with id "${id}".`);
         const payUrl = `${siteUrl()}/api/license/${w.id}?project=${encodeURIComponent(project)}`;
+        const required = await paymentRequiredBody(w, licenseResourceUrl(w)).catch(() => null);
         return text({
           work: { id: w.id, title: w.title, creator: w.creatorName },
           price: formatPrice(w.priceUsd),
@@ -116,13 +119,37 @@ const handler = createMcpHandler(
           pay_url: payUrl,
           how_to_pay: [
             "Tell the user what they are buying, the price and that it goes directly to the creator.",
-            `Call PayBox use_service with { credential_id: <the user's ${NETWORK_LABEL} wallet credential>, url: "${payUrl}" } (GET).`,
-            "PayBox opens the approval window; wait for the user to approve with their passkey, then poll get_request until it finishes.",
-            "The response body has download_url (full resolution) and receipt_url. Share both with the user.",
-            "Never submit the payment twice. If unsure, call verify_license with the licence id.",
+            `Route A (preferred): call PayBox use_service with { credential_id: <the user's ${NETWORK_LABEL} wallet credential>, url: "${payUrl}" } (GET). The response body has download_url and receipt_url.`,
+            "Route B (if use_service is not available): call PayBox pay_x402 with { credential_id, accepts: x402.accepts, resource_url: x402.resource.url, x402_version: 2, resource: x402.resource }. Once approved, pass output.value.x_payment's header value to Stockroom complete_license.",
+            "Either way PayBox asks the user to approve with their passkey; poll get_request until it finishes.",
+            "Never submit the same payment twice. If unsure, call verify_license with the licence id.",
           ],
+          x402: required
+            ? { x402_version: 2, accepts: required.accepts, resource: required.resource }
+            : "Temporarily unavailable; use Route A, or call license_work again.",
           licence_terms: TERMS_SUMMARY,
         });
+      },
+    );
+
+    server.registerTool(
+      "complete_license",
+      {
+        title: "Complete a Stockroom licence",
+        description:
+          "Finish a licence purchase after PayBox pay_x402 returns a signed payment. Pass the x402 payment header value; Stockroom settles it on-chain (USDC straight to the creator) and returns the download_url and receipt_url. Safe to retry: the same payment never charges twice.",
+        inputSchema: z.object({
+          id: z.string().describe("Work id."),
+          project: z.string().max(200).describe("Where the image will be used. Printed on the licence."),
+          payment: z.string().min(20).describe("The x402 payment header value from PayBox pay_x402 (output.value.x_payment)."),
+        }),
+      },
+      async ({ id, project, payment }) => {
+        const w = await getWork(id);
+        if (!w) return text(`No work with id "${id}".`);
+        const result = await purchase(w, payment, project);
+        if (!result.ok) return text({ status: "not_licensed", error: result.error, transaction: result.transaction ?? null });
+        return text(result.delivery);
       },
     );
 

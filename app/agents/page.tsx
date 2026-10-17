@@ -7,6 +7,7 @@ const TOOLS = [
   ["search_works", "Find photos and illustrations by what they show.", "free"],
   ["get_work", "Preview, price, creator and licence terms for one work.", "free"],
   ["license_work", "Returns the paid x402 URL to settle through PayBox.", "paid"],
+  ["complete_license", "Settles a payment signed by PayBox pay_x402 and issues the licence.", "paid"],
   ["verify_license", "Confirm a licence and its on-chain payment.", "free"],
 ];
 

@@ -34,7 +34,8 @@ Remote MCP server: `https://<your-domain>/api/mcp`
 |---|---|---|
 | `search_works` | Find works by what they show | free |
 | `get_work` | Preview image, price, creator, licence terms | free |
-| `license_work` | Returns the paid x402 URL to settle through PayBox | paid |
+| `license_work` | Returns the paid x402 URL (for PayBox `use_service`) and the raw requirements (for `pay_x402`) | paid |
+| `complete_license` | Settles a payment signed by PayBox `pay_x402` and issues the licence | paid |
 | `verify_license` | Confirms a licence and its on-chain payment | free |
 
 Also: `GET /api/works?q=`, `GET /api/license/<id>` (x402), `GET /api/licenses/<id>`, `/llms.txt`.

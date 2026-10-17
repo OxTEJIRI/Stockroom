@@ -41,9 +41,21 @@ async function requirementsFor(work: Work) {
 }
 
 export async function paymentRequiredResponse(work: Work, resourceUrl: string, error?: string) {
+  const body = await paymentRequiredBody(work, resourceUrl, error);
+  return new Response(JSON.stringify(body), {
+    status: 402,
+    headers: {
+      "content-type": "application/json",
+      "cache-control": "no-store",
+      "PAYMENT-REQUIRED": encodePaymentRequiredHeader(body),
+    },
+  });
+}
+
+export async function paymentRequiredBody(work: Work, resourceUrl: string, error?: string) {
   const server = await getServer();
   const requirements = await requirementsFor(work);
-  const body = await server.createPaymentRequiredResponse(
+  return server.createPaymentRequiredResponse(
     requirements,
     {
       url: resourceUrl,
@@ -53,14 +65,6 @@ export async function paymentRequiredResponse(work: Work, resourceUrl: string, e
     },
     error,
   );
-  return new Response(JSON.stringify(body), {
-    status: 402,
-    headers: {
-      "content-type": "application/json",
-      "cache-control": "no-store",
-      "PAYMENT-REQUIRED": encodePaymentRequiredHeader(body),
-    },
-  });
 }
 
 export function readPaymentHeader(req: Request) {
