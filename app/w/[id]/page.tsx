@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import CopyButton from "@/app/components/CopyButton";
+import Ledger from "@/app/components/Ledger";
+import Loupe from "@/app/components/Loupe";
+import { listLicenses } from "@/lib/licenses";
 import { EXPLORER_ADDRESS, NETWORK_LABEL } from "@/lib/config";
 import { TERMS_FULL } from "@/lib/terms";
 import { formatPrice, getWork } from "@/lib/works";
@@ -17,14 +20,17 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const w = await getWork(id);
   if (!w) notFound();
+  const sales = (await listLicenses()).filter((l) => l.workId === w.id);
   const short = `${w.payTo.slice(0, 6)}…${w.payTo.slice(-4)}`;
   const prompt = `License Stockroom work ${w.id} for my project.`;
 
   return (
     <div className="wrap work">
       <figure className="bigmount" style={{ margin: 0 }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`/media/preview/${w.id}`} alt={w.title} width={w.width} height={w.height} />
+        <Loupe src={`/media/preview/${w.id}`} size={190} zoom={2.2}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`/media/preview/${w.id}`} alt={w.title} width={w.width} height={w.height} />
+        </Loupe>
         <figcaption className="note">
           <span>{w.title}</span>
           <em>{formatPrice(w.priceUsd)}</em>
@@ -34,7 +40,8 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
       <div>
         <h1>{w.title}</h1>
         <p className="by">
-          By {w.creatorName}, {w.width}×{w.height} {w.ext.toUpperCase()}
+          By <Link href={`/c/${w.payTo}`}>{w.creatorName}</Link>, {w.width}×{w.height} {w.ext.toUpperCase()}
+          {sales.length > 0 && `, licensed ${sales.length} ${sales.length === 1 ? "time" : "times"}`}
         </p>
         {w.description && <p className="desc">{w.description}</p>}
         {w.tags.length > 0 && (
@@ -72,6 +79,12 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
             <li key={t}>{t}</li>
           ))}
         </ul>
+        {sales.length > 0 && (
+          <>
+            <h2 className="h3" style={{ marginTop: 28 }}>Licence history</h2>
+            <Ledger licenses={sales} limit={5} />
+          </>
+        )}
         <p style={{ marginTop: 28 }}>
           <Link href="/#catalogue">Back to the catalogue</Link>
         </p>

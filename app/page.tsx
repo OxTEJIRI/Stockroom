@@ -1,7 +1,12 @@
 import Link from "next/link";
+import Catalogue from "./components/Catalogue";
 import CopyButton from "./components/CopyButton";
+import Ledger from "./components/Ledger";
+import Loupe from "./components/Loupe";
 import { siteUrl } from "@/lib/config";
-import { formatPrice, listWorks, type Work } from "@/lib/works";
+import { loadCatalog } from "@/lib/catalog";
+import { totals } from "@/lib/licenses";
+import { formatPrice, type Work } from "@/lib/works";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +18,14 @@ const FALLBACK = [
 
 function slide(works: Work[], i: number) {
   const w = works[i];
-  if (w) return { title: w.title, price: formatPrice(w.priceUsd), bg: `url(/media/thumb/${w.id})` };
-  return FALLBACK[i];
+  if (w) return { title: w.title, price: formatPrice(w.priceUsd), src: `/media/thumb/${w.id}`, bg: `url(/media/thumb/${w.id})` };
+  return { ...FALLBACK[i], src: null as string | null };
 }
 
 export default async function Home() {
-  const works = await listWorks();
+  const { works, licenses, sheet } = await loadCatalog();
   const creators = new Set(works.map((w) => w.payTo)).size;
+  const sum = totals(licenses);
   const mcpUrl = `${siteUrl()}/api/mcp`;
   const picked = slide(works, 1);
 
@@ -27,7 +33,7 @@ export default async function Home() {
     <>
       <section className="hero">
         <div className="wrap">
-          <div>
+          <div className="hero-copy">
             <h1>
               Your agent licenses the photo.
               <span>The photographer gets paid.</span>
@@ -43,17 +49,23 @@ export default async function Home() {
             </div>
             <p className="fact">
               {works.length > 0
-                ? `${works.length} ${works.length === 1 ? "work" : "works"} from ${creators} ${creators === 1 ? "creator" : "creators"} so far. Stockroom takes no cut.`
+                ? `${works.length} ${works.length === 1 ? "work" : "works"} from ${creators} ${creators === 1 ? "creator" : "creators"}${sum.count > 0 ? `, ${formatPrice(sum.paidUsd)} paid to them so far` : ""}. Stockroom takes no cut.`
                 : "The shelves are being stocked. Stockroom takes no cut."}
             </p>
           </div>
 
-          <div className="table" aria-label="An agent picks a photo and the user approves the payment">
+          <div className="table" aria-label="An agent picks a photo and you approve the payment">
             {[0, 1, 2].map((i) => {
               const s = slide(works, i);
               return (
-                <figure key={i} className={`mount m${i + 1}`} style={{ margin: 0 }}>
-                  <div className="win" style={{ backgroundImage: s.bg }} />
+                <figure key={i} className={`mount m${i + 1}`}>
+                  {s.src ? (
+                    <Loupe src={s.src} className="win" style={{ backgroundImage: s.bg }} size={120} zoom={2.4}>
+                      <span className="sr-only">{s.title}</span>
+                    </Loupe>
+                  ) : (
+                    <div className="win" style={{ backgroundImage: s.bg }} />
+                  )}
                   <figcaption className="label">
                     <span>{s.title}</span>
                     <em>{s.price}</em>
@@ -83,6 +95,7 @@ export default async function Home() {
               </div>
               <div className="paid">Paid to the creator. Licence issued.</div>
             </div>
+            {works.length > 0 && <p className="table-hint">Hover a slide to look closer.</p>}
           </div>
         </div>
       </section>
@@ -113,30 +126,21 @@ export default async function Home() {
             <h2>Catalogue</h2>
             <p>Every frame here was made by a person. Prices are per licence and go to the creator in full.</p>
           </div>
-          <div className="sheet">
-            {works.length === 0 ? (
-              <div className="sheet-empty">
-                Nothing on the sheet yet. <Link href="/publish">List the first photo</Link>.
-              </div>
-            ) : (
-              <div className="sheet-grid">
-                {works.map((w, i) => (
-                  <Link key={w.id} href={`/w/${w.id}`} className="frame">
-                    <div className="shot">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/media/thumb/${w.id}`} alt={w.title} loading="lazy" />
-                    </div>
-                    <div className="edge">
-                      <span className="n">{String(i + 1).padStart(2, "0")}A</span>
-                      <span className="t">{w.title}</span>
-                      <span className="p">{formatPrice(w.priceUsd)}</span>
-                    </div>
-                    <div className="by">{w.creatorName}</div>
-                  </Link>
-                ))}
-              </div>
-            )}
+          <Catalogue works={sheet} />
+        </div>
+      </section>
+
+      <section className="section ledger-sec">
+        <div className="wrap ledger-grid">
+          <div>
+            <h2 className="h2">Paid to creators</h2>
+            <p>
+              {sum.count > 0
+                ? `Agents have bought ${sum.count} ${sum.count === 1 ? "licence" : "licences"} so far, and creators received ${formatPrice(sum.paidUsd)} in USDC. Every line opens its transaction on Base.`
+                : "Every licence an agent buys shows up here, with the USDC transfer to the creator you can open on Base."}
+            </p>
           </div>
+          <Ledger licenses={licenses} />
         </div>
       </section>
 

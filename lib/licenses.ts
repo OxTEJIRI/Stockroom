@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { getJson, putJson } from "./storage";
+import { getJson, listKeys, putJson } from "./storage";
 import { EXPLORER_TX, NETWORK, siteUrl } from "./config";
 import { TERMS_SUMMARY, TERMS_VERSION } from "./terms";
 import { newId, type Work } from "./works";
@@ -24,6 +24,23 @@ export type License = {
 export async function getLicense(id: string): Promise<License | null> {
   if (!/^[A-Za-z0-9]{4,40}$/.test(id)) return null;
   return getJson<License>(`licenses/${id}.json`);
+}
+
+let cache: { at: number; licenses: License[] } | null = null;
+
+/** All licences, newest first. Cached briefly per server instance. */
+export async function listLicenses(): Promise<License[]> {
+  if (cache && Date.now() - cache.at < 15_000) return cache.licenses;
+  const keys = (await listKeys("licenses/")).filter((k) => k.endsWith(".json"));
+  const all = (await Promise.all(keys.map((k) => getJson<License>(k)))).filter((l): l is License => Boolean(l));
+  all.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  cache = { at: Date.now(), licenses: all };
+  return all;
+}
+
+export function totals(licenses: License[]) {
+  const paid = licenses.reduce((s, l) => s + l.amountUsd, 0);
+  return { count: licenses.length, paidUsd: Math.round(paid * 100) / 100 };
 }
 
 export async function findLicenseByNonce(nonce: string): Promise<License | null> {
@@ -57,6 +74,7 @@ export async function createLicense(args: {
   };
   await putJson(`licenses/${license.id}.json`, license);
   if (license.nonce) await putJson(`nonces/${license.nonce}.json`, { id: license.id });
+  cache = null;
   return license;
 }
 

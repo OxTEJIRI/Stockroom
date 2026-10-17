@@ -44,7 +44,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           )}
           <div>
             <div className="t">{w ? <Link href={`/w/${w.id}`}>{l.workTitle}</Link> : l.workTitle}</div>
-            <div style={{ color: "var(--slate)" }}>By {l.creatorName}</div>
+            <div style={{ color: "var(--slate)" }}>By <Link href={`/c/${l.payTo}`}>{l.creatorName}</Link></div>
           </div>
         </div>
 
