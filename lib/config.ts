@@ -6,9 +6,13 @@ export const EXPLORER_TX = NETWORK === "eip155:84532" ? "https://sepolia.basesca
 export const EXPLORER_ADDRESS =
   NETWORK === "eip155:84532" ? "https://sepolia.basescan.org/address/" : "https://basescan.org/address/";
 
+// Public origin used in every link handed to agents (pay, download, receipt, previews).
+// VERCEL_PROJECT_PRODUCTION_URL can point at a removed auto-assigned domain, so production pins the real one.
+const PRODUCTION_ORIGIN = "https://stockroom-plugin.vercel.app";
+
 export function siteUrl(): string {
   if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, "");
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  if (process.env.VERCEL_ENV === "production") return PRODUCTION_ORIGIN;
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
   return "http://localhost:3000";
 }

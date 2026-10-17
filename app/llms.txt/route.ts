@@ -10,7 +10,7 @@ export function GET() {
 > Stock media for AI agents. Photos and illustrations by human creators, licensed per use and paid in USDC on ${NETWORK_LABEL} straight to the creator. A PayBox plugin; every payment is an x402 transaction and doubles as the licence.
 
 ## Use it
-- MCP server: ${base}/api/mcp (tools: search_works, get_work, license_work, verify_license)
+- MCP server: ${base}/api/mcp (tools: search_works, get_work, license_work, complete_license, verify_license)
 - Catalogue JSON: ${base}/api/works?q=<query>
 - Licence purchase (x402): GET ${base}/api/license/<work id>?project=<where it will be used>
 - Verify a licence: ${base}/api/licenses/<licence id>

@@ -1,114 +1,166 @@
 import Link from "next/link";
-import { NETWORK_LABEL, siteUrl } from "@/lib/config";
-import { formatPrice, listWorks } from "@/lib/works";
+import CopyButton from "./components/CopyButton";
+import { siteUrl } from "@/lib/config";
+import { formatPrice, listWorks, type Work } from "@/lib/works";
 
 export const dynamic = "force-dynamic";
+
+const FALLBACK = [
+  { title: "Your photo", price: "$0.25", bg: "linear-gradient(135deg,#9a5a2c,#e2a865)" },
+  { title: "Their illustration", price: "$1.00", bg: "linear-gradient(135deg,#29566a,#7cc0cf)" },
+  { title: "A street at dusk", price: "$0.50", bg: "linear-gradient(135deg,#3d3a5c,#c48c8a)" },
+];
+
+function slide(works: Work[], i: number) {
+  const w = works[i];
+  if (w) return { title: w.title, price: formatPrice(w.priceUsd), bg: `url(/media/thumb/${w.id})` };
+  return FALLBACK[i];
+}
 
 export default async function Home() {
   const works = await listWorks();
   const creators = new Set(works.map((w) => w.payTo)).size;
   const mcpUrl = `${siteUrl()}/api/mcp`;
+  const picked = slide(works, 1);
 
   return (
     <>
       <section className="hero">
-        <div className="wrap hero-grid">
+        <div className="wrap">
           <div>
-            <div className="eyebrow">A PayBox plugin · x402 · USDC on {NETWORK_LABEL}</div>
             <h1>
-              Stock media your agent <em>pays</em> the creator for.
+              Your agent licenses the photo.
+              <span>The photographer gets paid.</span>
             </h1>
             <p className="lede">
-              Creators list photos and illustrations. AI agents license them through PayBox. The USDC goes straight to
-              the creator&apos;s wallet, and the payment itself is the licence.
+              Stockroom is a library of photos and illustrations made by people. Agents in Claude, ChatGPT and Grok
+              license them through PayBox: you approve with your passkey, the USDC goes straight to the creator, and the
+              payment is the licence.
             </p>
             <div className="ctas">
               <Link href="/agents" className="btn">Connect your agent</Link>
-              <Link href="/publish" className="btn ghost">Sell your work</Link>
+              <Link href="/publish" className="btn line">Sell your work</Link>
             </div>
+            <p className="fact">
+              {works.length > 0
+                ? `${works.length} ${works.length === 1 ? "work" : "works"} from ${creators} ${creators === 1 ? "creator" : "creators"} so far. Stockroom takes no cut.`
+                : "The shelves are being stocked. Stockroom takes no cut."}
+            </p>
           </div>
-          <div className="ledger" aria-label="Catalogue summary">
-            <div className="head">
-              <span>Stockroom ledger</span>
-              <span className="stamp">Paid on-chain</span>
+
+          <div className="table" aria-label="An agent picks a photo and the user approves the payment">
+            {[0, 1, 2].map((i) => {
+              const s = slide(works, i);
+              return (
+                <figure key={i} className={`mount m${i + 1}`} style={{ margin: 0 }}>
+                  <div className="win" style={{ backgroundImage: s.bg }} />
+                  <figcaption className="label">
+                    <span>{s.title}</span>
+                    <em>{s.price}</em>
+                  </figcaption>
+                </figure>
+              );
+            })}
+            <svg className="grease-ring" viewBox="0 0 400 300" aria-hidden>
+              <path d="M210 18 C 320 10, 392 70, 384 150 C 376 236, 290 286, 196 282 C 96 278, 14 230, 16 148 C 18 70, 96 22, 214 26 C 250 28, 282 36, 300 46" />
+            </svg>
+            <div className="ask">
+              <small>You, to your agent</small>
+              Find a warm photo of a coffee shop for my landing page and license it.
             </div>
-            <div className="row"><span>Works listed</span><span>{works.length}</span></div>
-            <div className="row"><span>Creators</span><span>{creators}</span></div>
-            <div className="row"><span>Platform fee</span><span>0%</span></div>
-            <div className="row"><span>Paid to</span><span>the creator, directly</span></div>
-            <div className="row"><span>Proof of licence</span><span>the transaction</span></div>
+            <div className="approve" role="img" aria-label={`PayBox approval for ${picked.price} USDC`}>
+              <div className="row">
+                <span className="who">PayBox approval</span>
+                <span className="who">Base</span>
+              </div>
+              <div className="amt">{picked.price} USDC</div>
+              <div className="key">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+                  <circle cx="8" cy="15" r="4" />
+                  <path d="M10.8 12.2 20 3M16 7l3 3M14 9l2 2" />
+                </svg>
+                Approve with passkey
+              </div>
+              <div className="paid">Paid to the creator. Licence issued.</div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="wrap steps">
-        <div className="step">
-          <div className="n">01</div>
-          <h3>A creator lists a work</h3>
-          <p>Upload an image, set a price and paste a Base wallet. Stockroom keeps the original locked and shows a watermarked preview.</p>
-        </div>
-        <div className="step">
-          <div className="n">02</div>
-          <h3>An agent licenses it</h3>
-          <p>Claude, ChatGPT or Grok finds it, PayBox asks you to approve with your passkey, and the USDC moves wallet to wallet.</p>
-        </div>
-        <div className="step">
-          <div className="n">03</div>
-          <h3>The payment is the licence</h3>
-          <p>The agent gets the full file and a receipt tied to the on-chain transaction. Anyone can verify it.</p>
+      <section className="strip" aria-label="How a licence happens">
+        <div className="wrap">
+          <div className="cell">
+            <div className="num">1</div>
+            <h3>A creator lists a photo</h3>
+            <p>Upload it, set a price, add a Base wallet. Agents only ever see a watermarked preview.</p>
+          </div>
+          <div className="cell">
+            <div className="num">2</div>
+            <h3>Your agent picks it</h3>
+            <p>It searches by what the image shows and checks with you before it spends anything.</p>
+          </div>
+          <div className="cell">
+            <div className="num">3</div>
+            <h3>You approve, they get paid</h3>
+            <p>One passkey tap. USDC goes wallet to wallet, and the agent gets the full file plus a receipt anyone can check.</p>
+          </div>
         </div>
       </section>
 
       <section className="section" id="catalogue">
         <div className="wrap">
           <div className="section-head">
-            <h2>The catalogue</h2>
-            <span className="eyebrow">{works.length} works · every one made by a person</span>
+            <h2>Catalogue</h2>
+            <p>Every frame here was made by a person. Prices are per licence and go to the creator in full.</p>
           </div>
-          {works.length === 0 ? (
-            <div className="empty">
-              Nothing listed yet. <Link href="/publish">Be the first to sell a work</Link>.
-            </div>
-          ) : (
-            <div className="grid">
-              {works.map((w) => (
-                <Link key={w.id} href={`/w/${w.id}`} className="tile">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={`/media/thumb/${w.id}`} alt={w.title} width={w.width} height={w.height} loading="lazy" />
-                  <div className="meta">
-                    <div>
-                      <div className="t">{w.title}</div>
-                      <div className="c">by {w.creatorName}</div>
+          <div className="sheet">
+            {works.length === 0 ? (
+              <div className="sheet-empty">
+                Nothing on the sheet yet. <Link href="/publish">List the first photo</Link>.
+              </div>
+            ) : (
+              <div className="sheet-grid">
+                {works.map((w, i) => (
+                  <Link key={w.id} href={`/w/${w.id}`} className="frame">
+                    <div className="shot">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/media/thumb/${w.id}`} alt={w.title} loading="lazy" />
                     </div>
-                    <span className="price">{formatPrice(w.priceUsd)}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+                    <div className="edge">
+                      <span className="n">{String(i + 1).padStart(2, "0")}A</span>
+                      <span className="t">{w.title}</span>
+                      <span className="p">{formatPrice(w.priceUsd)}</span>
+                    </div>
+                    <div className="by">{w.creatorName}</div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
-      <section className="section">
-        <div className="wrap agent" style={{ paddingTop: 48 }}>
+      <section className="section" style={{ paddingTop: 24 }}>
+        <div className="wrap agent">
           <div>
-            <div className="eyebrow">For agents</div>
-            <h2 style={{ fontFamily: "var(--serif)", fontWeight: 400, fontSize: 40, margin: "8px 0 12px", lineHeight: 1.05 }}>
-              One plugin. Your agent stops scraping.
-            </h2>
-            <p className="muted" style={{ marginTop: 0 }}>
-              Enable Stockroom in PayBox, or add it to any MCP client with this URL:
+            <h2 className="h2" style={{ marginBottom: 14 }}>Add Stockroom to your agent</h2>
+            <p>
+              Turn on Stockroom in PayBox&apos;s plugins, or add it to any MCP client with this address. Your agent can
+              search for free; it only pays when you approve a licence.
             </p>
-            <div className="code">{mcpUrl}</div>
+            <div className="urlbox">
+              <code>{mcpUrl}</code>
+              <CopyButton value={mcpUrl} />
+            </div>
             <p style={{ marginTop: 16 }}>
-              <Link href="/agents">How it works for agents →</Link>
+              <Link href="/agents">See how a purchase works</Link>
             </p>
           </div>
-          <div className="chat" aria-label="Example conversation">
-            <div className="bubble user">I&apos;m building a landing page for a coffee shop in Lagos. Find a hero photo and license it.</div>
-            <div className="bubble bot">Found 3 on Stockroom. &ldquo;Morning pour&rdquo; by a Lagos photographer fits best: warm light, wide crop. It&apos;s $0.25, paid directly to the creator.</div>
-            <div className="bubble pay">PayBox · approve $0.25 USDC on Base → creator wallet · passkey ✓</div>
-            <div className="bubble bot">Licensed. Here&apos;s the full-resolution file and your licence receipt.</div>
+          <div className="convo" aria-label="Example conversation">
+            <div className="msg me">I&apos;m building a site for a coffee shop in Lagos. Find a hero photo and license it.</div>
+            <div className="msg bot">I found three on Stockroom. &ldquo;Morning pour&rdquo; fits best: warm light, wide crop, room for a headline. It&apos;s $0.25, paid straight to the photographer.</div>
+            <div className="msg sys">You approved $0.25 USDC with your passkey</div>
+            <div className="msg bot">Licensed. Here&apos;s the full-resolution file and your licence receipt.</div>
           </div>
         </div>
       </section>

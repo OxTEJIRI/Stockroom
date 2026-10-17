@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EXPLORER_ADDRESS, NETWORK_LABEL, siteUrl } from "@/lib/config";
+import CopyButton from "@/app/components/CopyButton";
+import { EXPLORER_ADDRESS, NETWORK_LABEL } from "@/lib/config";
 import { TERMS_FULL } from "@/lib/terms";
 import { formatPrice, getWork } from "@/lib/works";
 
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const w = await getWork(id);
-  return { title: w ? `${w.title} · Stockroom` : "Stockroom" };
+  return { title: w ? `${w.title} – Stockroom` : "Stockroom" };
 }
 
 export default async function WorkPage({ params }: { params: Promise<{ id: string }> }) {
@@ -17,53 +18,62 @@ export default async function WorkPage({ params }: { params: Promise<{ id: strin
   const w = await getWork(id);
   if (!w) notFound();
   const short = `${w.payTo.slice(0, 6)}…${w.payTo.slice(-4)}`;
+  const prompt = `License Stockroom work ${w.id} for my project.`;
 
   return (
     <div className="wrap work">
-      <div className="frame">
+      <figure className="bigmount" style={{ margin: 0 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={`/media/preview/${w.id}`} alt={w.title} width={w.width} height={w.height} />
-      </div>
+        <figcaption className="note">
+          <span>{w.title}</span>
+          <em>{formatPrice(w.priceUsd)}</em>
+        </figcaption>
+      </figure>
+
       <div>
-        <div className="eyebrow">Work {w.id}</div>
         <h1>{w.title}</h1>
-        <div className="muted">
-          by {w.creatorName} ·{" "}
-          <a href={`${EXPLORER_ADDRESS}${w.payTo}`} target="_blank" rel="noreferrer" className="mono">
-            {short}
-          </a>
-        </div>
-        {w.description && <p style={{ color: "var(--ink-2)" }}>{w.description}</p>}
+        <p className="by">
+          By {w.creatorName}, {w.width}×{w.height} {w.ext.toUpperCase()}
+        </p>
+        {w.description && <p className="desc">{w.description}</p>}
         {w.tags.length > 0 && (
-          <div className="tags">
+          <div className="chips">
             {w.tags.map((t) => (
-              <span key={t} className="tag">{t}</span>
+              <span key={t} className="chip">{t}</span>
             ))}
           </div>
         )}
 
-        <div className="ledger" style={{ margin: "20px 0" }}>
-          <div className="row"><span>Price</span><span>{formatPrice(w.priceUsd)} USDC</span></div>
-          <div className="row"><span>Network</span><span>{NETWORK_LABEL}</span></div>
-          <div className="row"><span>Paid to</span><span>the creator · {short}</span></div>
-          <div className="row"><span>Original</span><span>{w.width}×{w.height} {w.ext.toUpperCase()}</span></div>
+        <div className="buy">
+          <div className="price">
+            {formatPrice(w.priceUsd)}
+            <small>USDC on {NETWORK_LABEL}</small>
+          </div>
+          <p className="to">
+            Paid in full to the creator&apos;s wallet{" "}
+            <a href={`${EXPLORER_ADDRESS}${w.payTo}`} target="_blank" rel="noreferrer" className="mono">
+              {short}
+            </a>
+            . The preview is watermarked; the licence unlocks the original.
+          </p>
+          <div className="prompt">
+            <span>{prompt}</span>
+            <CopyButton value={prompt} />
+          </div>
+          <p className="fine">
+            Paste this to your agent with PayBox connected. You&apos;ll approve the payment with your passkey.
+          </p>
         </div>
 
-        <div className="eyebrow" style={{ marginBottom: 8 }}>License it with your agent</div>
-        <div className="code">License Stockroom work {w.id} for my project.</div>
-        <p className="muted" style={{ fontSize: 14 }}>
-          Needs PayBox connected to Claude, ChatGPT or Grok, with Stockroom enabled. Or call the x402 endpoint directly:{" "}
-          <span className="mono" style={{ wordBreak: "break-all" }}>{siteUrl()}/api/license/{w.id}</span>
-        </p>
-
-        <div className="eyebrow" style={{ margin: "24px 0 8px" }}>Licence terms</div>
-        <ul className="terms">
+        <h2 className="h3">What the licence allows</h2>
+        <ul className="terms-list">
           {TERMS_FULL.map((t) => (
             <li key={t}>{t}</li>
           ))}
         </ul>
-        <p style={{ marginTop: 24 }}>
-          <Link href="/#catalogue">← Back to the catalogue</Link>
+        <p style={{ marginTop: 28 }}>
+          <Link href="/#catalogue">Back to the catalogue</Link>
         </p>
       </div>
     </div>

@@ -7,72 +7,72 @@ import { formatPrice, getWork } from "@/lib/works";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Licence receipt · Stockroom" };
+export const metadata = { title: "Licence – Stockroom" };
 
-const short = (a: string) => (a ? `${a.slice(0, 8)}…${a.slice(-6)}` : "—");
+const NETWORKS: Record<string, string> = { "eip155:8453": "Base", "eip155:84532": "Base Sepolia" };
 
 export default async function ReceiptPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const l = await getLicense(id);
   if (!l) notFound();
   const w = await getWork(l.workId);
-  const date = new Date(l.createdAt).toUTCString().replace(" GMT", " UTC");
+  const date = new Date(l.createdAt).toLocaleString("en-GB", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" });
 
   return (
     <div className="wrap receipt-wrap">
       <article className="receipt">
-        <div className="inner">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <span className="eyebrow">Stockroom licence · {l.termsVersion}</span>
-            <span className="valid">Valid</span>
+        <div className="head">
+          <div>
+            <h1>Licence {l.id}</h1>
+            <div className="when">Issued {date} UTC</div>
+            <div style={{ marginTop: 10 }}><span className="valid">Valid, paid on-chain</span></div>
           </div>
-          <h1>Licence {l.id}</h1>
-          <div className="muted mono" style={{ fontSize: 13 }}>{date}</div>
-
-          <div className="work-row">
-            {w ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={`/media/thumb/${w.id}`} alt={l.workTitle} style={{ width: 96, height: 96, objectFit: "cover" }} />
-            ) : (
-              <div style={{ width: 96, height: 96, background: "var(--paper-2)" }} />
-            )}
-            <div>
-              <div style={{ fontFamily: "var(--serif)", fontSize: 26, lineHeight: 1.1 }}>
-                {w ? <Link href={`/w/${w.id}`}>{l.workTitle}</Link> : l.workTitle}
-              </div>
-              <div className="muted">by {l.creatorName}</div>
-            </div>
-          </div>
-
-          <div className="kv">
-            <div className="row"><span>Licensed to</span><span><a href={`${EXPLORER_ADDRESS}${l.payer}`} target="_blank" rel="noreferrer">{l.payer || "—"}</a></span></div>
-            <div className="row"><span>Project</span><span>{l.project || "—"}</span></div>
-            <div className="row"><span>Amount</span><span>{formatPrice(l.amountUsd)} USDC</span></div>
-            <div className="row"><span>Paid to creator</span><span><a href={`${EXPLORER_ADDRESS}${l.payTo}`} target="_blank" rel="noreferrer">{l.payTo}</a></span></div>
-            <div className="row"><span>Network</span><span>{l.network === "eip155:8453" ? "Base" : l.network === "eip155:84532" ? "Base Sepolia" : l.network} · USDC</span></div>
-            <div className="row">
-              <span>Transaction</span>
-              <span>
-                {l.txHash ? (
-                  <a href={`${EXPLORER_TX}${l.txHash}`} target="_blank" rel="noreferrer">{short(l.txHash)} ↗</a>
-                ) : (
-                  "—"
-                )}
-              </span>
-            </div>
-          </div>
-
-          <div className="eyebrow" style={{ margin: "26px 0 8px" }}>Terms</div>
-          <ul className="terms">
-            {TERMS_FULL.map((t) => (
-              <li key={t}>{t}</li>
-            ))}
-          </ul>
-          <div style={{ marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-            <span className="stamp">Paid on-chain · licence granted</span>
-            <span className="muted mono" style={{ fontSize: 12 }}>Verify: /api/licenses/{l.id}</span>
+          <div className="stampmark" aria-hidden>
+            Licensed
+            <svg viewBox="0 0 160 60" preserveAspectRatio="none">
+              <path d="M84 4 C 140 2, 158 18, 156 32 C 154 48, 120 58, 78 57 C 36 56, 3 46, 4 30 C 5 14, 40 3, 90 6 C 104 7, 116 10, 124 14" />
+            </svg>
           </div>
         </div>
+
+        <div className="item">
+          {w ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/media/thumb/${w.id}`} alt={l.workTitle} />
+          ) : (
+            <div style={{ width: 120, aspectRatio: "3 / 2", background: "var(--glass)", borderRadius: 4 }} />
+          )}
+          <div>
+            <div className="t">{w ? <Link href={`/w/${w.id}`}>{l.workTitle}</Link> : l.workTitle}</div>
+            <div style={{ color: "var(--slate)" }}>By {l.creatorName}</div>
+          </div>
+        </div>
+
+        <div className="facts">
+          <div className="row"><span>Licensed to</span><a className="addr" href={`${EXPLORER_ADDRESS}${l.payer}`} target="_blank" rel="noreferrer">{l.payer || "Unknown"}</a></div>
+          <div className="row"><span>For the project</span><span>{l.project || "Not specified"}</span></div>
+          <div className="row"><span>Amount</span><span>{formatPrice(l.amountUsd)} USDC on {NETWORKS[l.network] ?? l.network}</span></div>
+          <div className="row"><span>Paid to the creator</span><a className="addr" href={`${EXPLORER_ADDRESS}${l.payTo}`} target="_blank" rel="noreferrer">{l.payTo}</a></div>
+          <div className="row">
+            <span>Transaction</span>
+            {l.txHash ? (
+              <a className="addr" href={`${EXPLORER_TX}${l.txHash}`} target="_blank" rel="noreferrer">{l.txHash}</a>
+            ) : (
+              <span>Not recorded</span>
+            )}
+          </div>
+        </div>
+
+        <h2 className="h3" style={{ marginTop: 26 }}>What this licence allows</h2>
+        <ul className="terms-list">
+          {TERMS_FULL.map((t) => (
+            <li key={t}>{t}</li>
+          ))}
+        </ul>
+        <p className="hint" style={{ marginTop: 20 }}>
+          Anyone can check this licence at <span className="mono">/api/licenses/{l.id}</span>, or by asking an agent to run{" "}
+          <span className="mono">verify_license</span>.
+        </p>
       </article>
     </div>
   );
